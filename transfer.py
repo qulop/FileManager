@@ -3,17 +3,27 @@ import time
 import shutil
 import locale
 import getpass
-from google_trans_new import google_translator
+import translation
+
+try:
+    f1 = open('logs.txt', 'r'); f1.close()
+    try:
+        f2 = open('.config', 'r'); f2.close()
+    except FileNotFoundError:
+        open('.config', 'w+')
+except FileNotFoundError:
+    open('logs.txt', 'w+')
+
+
 
 language = locale.getdefaultlocale(); language = language[0][:2]
+translation.translate(language)
+
 if language == 'be': language = 'ru'
 else: language = 'en'
 user = getpass.getuser()
 LOGS = True
 
-translator = google_translator()
-translate_text = translator.translate('привет', lang_tgt='en')
-print(translate_text)
 
 _from = '/home/' + user + '/'
 dirs = {
@@ -48,13 +58,32 @@ ways = {
 }
 
 class Transfer:
-    def __init__(self, *extensions):
+    def __init__(self, type: str):
+        '''
+        :param type: File type. Available types: 'doc', 'vid', 'img', 'aud', 'arh'.
         '''
 
-        :param extensions:  All extensions. You must create a separate copy of class for every file type
-        '''
-        self.__extensions = extensions
+        self.__all_types = ['doc', 'vid', 'img', 'aud', 'arh']
+        if type not in self.__all_types:
+            raise 'the file type, when you specified does not exist or is not supported by this version of the utility'
+        self.img = ['png', 'jpg', 'ora']
+        self.doc = ['pdf', 'docx', 'doc', 'djvu']
+        self.vid = ['mp4', 'avi', 'mov', 'mkv', 'm4v']
+        self.aud = ['mp3', 'aiff', 'au']
+        self.arh = ['7z', 'jar', 'deb', 'rar', 'zip']
+
+        ratios = {
+            'img': self.img,
+            'vid': self.vid,
+            'aud': self.aud,
+            'arh': self.arh,
+            'doc': self.doc
+        }
+
+        self.__extensions = ratios[type]
         self.sp = False
+        self.type = type
+        self.path = ways[type]
 
     def add_special_moves(self, special_files: list, special_dirs: list):
         '''
@@ -75,18 +104,6 @@ class Transfer:
                 os.mkdir(self.path + special_dirs[i])
             except FileExistsError:
                 continue
-
-    def file_type(self, type: str):
-        '''
-        
-        :param type:
-        :return:
-        '''
-        self.__all_types = ['txt', 'doc', 'vid', 'img', 'aud', 'arh']
-        if type not in self.__all_types:
-            raise 'the file type, when you specified does not exist or is not supported by this version of the utility'
-        self.type = type
-        self.path = ways[self.type]
 
     def __calculate_size(self, finally_path: str):
         file_size = os.stat(finally_path)
@@ -142,7 +159,7 @@ class Transfer:
                 print(new_location, file_size)
 
 
-class ManageAllFiles:
+class Manager:
     def __init__(self, *args: Transfer):
         self.__all_types = args
         self.__from = _from + dirs['downloads'][language] + '/'
@@ -155,7 +172,6 @@ class ManageAllFiles:
 _from = '/home/qlop/'
 
 
-
 # for future gui app
 img = ['*.png', '*.jpg', '*.ora']
 aud = ['*.mp3', '*.aiff', '*.au']
@@ -164,16 +180,13 @@ doc = ['*.pdf', '*.docx', '*.doc']
 text = ['*.txt']
 # ----
 
-
-images = Transfer('png', 'jpg', 'ora'); images.file_type('img')
+images = Transfer('img')
 images.add_special_moves(['minah'], ['chaesu'])
+audio = Transfer('aud')
+videos = Transfer('vid')
+docs = Transfer('doc')
 
-audio = Transfer('mp3', 'aiff', 'au'); audio.file_type('aud')
-videos = Transfer('mp4', 'avi', 'mov', 'mkv', 'm4v'); videos.file_type('vid')
-docs = Transfer('pdf', 'docx', 'doc', 'djvu'); docs.file_type('doc')
-
-
-manager = ManageAllFiles(images, audio, videos, docs)
+manager = Manager(images, audio, videos, docs)
 
 # while True:
 #     for root, dirs, files in os.walk(f'/home/{user}/Загрузки'):
