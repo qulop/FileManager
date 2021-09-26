@@ -3,7 +3,6 @@ import time
 import shutil
 import locale
 import getpass
-import sys
 import translation
 
 try:
@@ -27,35 +26,12 @@ for line in open('.config', 'r'):
 if not dirs:
     dirs = translation.translate(language)
 
-if language == 'be': language = 'ru'
-else: language = 'en'
 user = getpass.getuser()
 LOGS = True
 
 
 _from = '/home/' + user + '/'
-# dirs = {
-#     'downloads': {
-#         'en': 'Downloads',
-#         'ru': 'Загрузки'
-#     },
-#     'images': {
-#         'en': 'Pictures',
-#         'ru': 'Изображения'
-#     },
-#     'videos': {
-#         'en': 'Videos',
-#         'ru': 'Видео'
-#     },
-#     'music': {
-#         'en': 'Music',
-#         'ru': 'Музыка'
-#     },
-#     'docks': {
-#         'en': 'Documents',
-#         'ru': 'Документы'
-#     },
-# }
+
 
 ways = {
     'img': _from + dirs['Pictures'] + '/',
