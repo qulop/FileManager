@@ -3,6 +3,7 @@ import time
 import shutil
 import locale
 import getpass
+import sys
 import translation
 
 try:
@@ -17,7 +18,14 @@ except FileNotFoundError:
 
 
 language = locale.getdefaultlocale(); language = language[0][:2]
-translation.translate(language)
+dirs = None
+
+for line in open('.config', 'r'):
+    if eval(line)['Language'] == language:
+        dirs = eval(line)
+
+if not dirs:
+    dirs = translation.translate(language)
 
 if language == 'be': language = 'ru'
 else: language = 'en'
@@ -26,35 +34,35 @@ LOGS = True
 
 
 _from = '/home/' + user + '/'
-dirs = {
-    'downloads': {
-        'en': 'Downloads',
-        'ru': 'Загрузки'
-    },
-    'images': {
-        'en': 'Pictures',
-        'ru': 'Изображения'
-    },
-    'videos': {
-        'en': 'Videos',
-        'ru': 'Видео'
-    },
-    'music': {
-        'en': 'Music',
-        'ru': 'Музыка'
-    },
-    'docks': {
-        'en': 'Documents',
-        'ru': 'Документы'
-    },
-}
+# dirs = {
+#     'downloads': {
+#         'en': 'Downloads',
+#         'ru': 'Загрузки'
+#     },
+#     'images': {
+#         'en': 'Pictures',
+#         'ru': 'Изображения'
+#     },
+#     'videos': {
+#         'en': 'Videos',
+#         'ru': 'Видео'
+#     },
+#     'music': {
+#         'en': 'Music',
+#         'ru': 'Музыка'
+#     },
+#     'docks': {
+#         'en': 'Documents',
+#         'ru': 'Документы'
+#     },
+# }
 
 ways = {
-    'img': _from + dirs['images'][language] + '/',
-    'vid': _from + dirs['videos'][language] + '/',
-    'aud': _from + dirs['music'][language] + '/',
-    'doc': _from + dirs['docks'][language] + '/',
-    'arc': _from + dirs['docks'][language] + '/',
+    'img': _from + dirs['Pictures'] + '/',
+    'vid': _from + dirs['Videos'] + '/',
+    'aud': _from + dirs['Music'] + '/',
+    'doc': _from + dirs['Documents'] + '/',
+    # 'arc': _from + dirs['docks'] + '/',
 }
 
 class Transfer:
@@ -63,7 +71,7 @@ class Transfer:
         :param type: File type. Available types: 'doc', 'vid', 'img', 'aud', 'arh'.
         '''
 
-        self.__all_types = ['doc', 'vid', 'img', 'aud', 'arh']
+        self.__all_types = ['doc', 'vid', 'img', 'aud']
         if type not in self.__all_types:
             raise 'the file type, when you specified does not exist or is not supported by this version of the utility'
         self.img = ['png', 'jpg', 'ora']
@@ -162,7 +170,7 @@ class Transfer:
 class Manager:
     def __init__(self, *args: Transfer):
         self.__all_types = args
-        self.__from = _from + dirs['downloads'][language] + '/'
+        self.__from = _from + dirs['Downloads'] + '/'
 
     def start_manage(self, files):
         for type in self.__all_types:
@@ -188,7 +196,7 @@ docs = Transfer('doc')
 
 manager = Manager(images, audio, videos, docs)
 
-# while True:
-#     for root, dirs, files in os.walk(f'/home/{user}/Загрузки'):
-#         manager.start_manage(files)
-#     time.sleep(1.5)
+while True:
+    for root, dirs, files in os.walk(f'/home/{user}/Загрузки'):
+        manager.start_manage(files)
+    time.sleep(1.5)
