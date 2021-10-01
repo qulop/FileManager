@@ -4,22 +4,25 @@ import shutil
 import locale
 import getpass
 import translation
+import fileinput as fi
+
+log_file = 'logs.log'
+config_file = 'config.conf'
 
 try:
-    f1 = open('logs.txt', 'r'); f1.close()
-    try:
-        f2 = open('.config', 'r'); f2.close()
-    except FileNotFoundError:
-        open('.config', 'w+')
+    f1 = open(log_file, 'r'); f1.close()
 except FileNotFoundError:
-    open('logs.txt', 'w+')
-
+    open(log_file, 'w+')
+try:
+    f2 = open(config_file, 'r'); f2.close()
+except FileNotFoundError:
+    open(config_file, 'w+')
 
 
 language = locale.getdefaultlocale(); language = language[0][:2]
 dirs = None
 
-for line in open('.config', 'r'):
+for line in open(config_file, 'r'):
     if eval(line)['Language'] == language:
         dirs = eval(line)
 
@@ -70,12 +73,6 @@ class Transfer:
         self.path = ways[type]
 
     def add_special_moves(self, special_files: list, special_dirs: list):
-        '''
-
-        :param special_files:
-        :param special_dirs:
-        :return:
-        '''
         self.__special_files = special_files
         self.__special_dirs = special_dirs
         self.sp = True
@@ -111,9 +108,13 @@ class Transfer:
                 new_location = shutil.move(from_, to_)
                 if LOGS:
                     log = 'new location: ' + new_location + '; size: ' + file_size + '; type: ' + self.type
-                    file = open('logs.txt', 'a'); file.write(log+'\n\n')
+                    file = open(log_file, 'a'); file.write(log+'\n\n')
                     file.close()
                 print(new_location, file_size)
+                # for fi.input(files='logs.log', inplace=True) as file:
+                #     for line in file:
+                #         if fi.lineno() == 1:
+                #             print('tot')
                 return 1
         return -1
 
@@ -138,7 +139,7 @@ class Transfer:
                 new_location = shutil.move(from_, to_)
                 if LOGS:
                     log = 'new location: ' + new_location + '; size: ' + file_size + '; type: ' + self.type
-                    file = open('logs.txt', 'a'); file.write(log+'\n\n')
+                    file = open(log_file, 'a'); file.write(log+'\n\n')
                     file.close()
                 print(new_location, file_size)
 
@@ -153,7 +154,9 @@ class Manager:
             type.move(files, self.__from)
 
 
-_from = '/home/qlop/'
+class Create:
+    def __init__(self, *extensions):
+        self.new_type_extensions = extensions
 
 
 # for future gui app
@@ -172,7 +175,9 @@ docs = Transfer('doc')
 
 manager = Manager(images, audio, videos, docs)
 
-while True:
-    for root, dirs, files in os.walk(f'/home/{user}/Загрузки'):
-        manager.start_manage(files)
-    time.sleep(1.5)
+
+def start():
+    while True:
+        for root, dirs, files in os.walk(f'/home/{user}/Загрузки'):
+            manager.start_manage(files)
+        time.sleep(1.5)

@@ -1,4 +1,5 @@
 import requests
+import random
 
 
 def translate(language_code: str) -> dict:
@@ -22,7 +23,7 @@ def translate(language_code: str) -> dict:
                 'Documents': translte[4]
                 }
 
-    with open('.config', 'a') as config:
+    with open('config.conf', 'a') as config:
         config.write(str(returned) + '\n')
 
     return returned
