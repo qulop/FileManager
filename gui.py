@@ -1,11 +1,4 @@
-import os
-import sys
-import time
-import shutil
-import getpass
 from tkinter import *
-import transfer
-from tkinter import messagebox
 
 def a(event):
     x = event.x
@@ -58,13 +51,12 @@ class App:
 
 
 
-# def special_file():
-#     pass
-#
-# def help():
-#     pass
-#
-# user = getpass.getuser()
+def special_file():
+    pass
+
+def help():
+    pass
+
 
 # шапка------------------------------
 root = Tk()
@@ -88,16 +80,6 @@ mainmenu.add_cascade(label='управление', menu=file_manage)
 mainmenu.add_command(label='справка')
 # -----------------------------------
 
-# def on():
-#     if status == 0:
-#         status2['text'] = '(вкл)'
-#         but['text'] = 'выключить'
-#         f['file'] = 'icons/active.png'
-#
-#     else:
-#         status2['text'] = '(выкл)'
-#         but['text'] = 'включить'
-
 
 def window():
     def delete():
@@ -114,6 +96,8 @@ on = PhotoImage(file='icons/switch-on.png')
 off = PhotoImage(file='icons/switch-off.png')
 active = PhotoImage(file='icons/active.png')
 notactive = PhotoImage(file='icons/notactive.png')
+
+
 def aa():
     global af
     if af == 'off':
@@ -128,6 +112,7 @@ def aa():
         lab['image'] = notactive
         second_status['text'] = '(выкл)'
         af = 'off'
+
 
 status = Label(root, text='Текущее состояние: ', bg='#ffffff'); status.place(x=10, y=265)
 second_status = Label(root, text='(выкл)', bg='#ffffff'); second_status.place(x=185, y=265)
