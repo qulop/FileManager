@@ -6,6 +6,8 @@ active = PhotoImage(file='icons/active.png')
 notactive = PhotoImage(file='icons/notactive.png')
 on = PhotoImage(file='icons/switch-on.png')
 off = PhotoImage(file='icons/switch-off.png')
+up = PhotoImage(file='icons/up.png')
+down = PhotoImage(file='icons/down.png')
 
 main_bg = '#4d4d4d'
 text_fg = '#b3b3b3'
@@ -44,15 +46,23 @@ def add_extensions(event=None):
     extension_frame.create_line(0, 70, 400, 70, fill='#cccccc')     # create a underline 1
 
     bool_var = BooleanVar()
-    bool_var.set(0)
+    bool_var.set(1)
     sort_by_types = Checkbutton(extension_frame, variable=bool_var, onvalue=1, offvalue=0,
                                   text='Сортровать файлы по их типам(фото/видео/...)',
                                   bg=main_bg, activebackground=main_bg, highlightthickness=0)       # checkbox
     sort_by_types.place(x=ref_x-6, y=85)
 
+    # ----PHOTOS----
     Label(text='Расширения для фотографий:', bg=main_bg).place(x=ref_x, y=ref_y)
+    photo_text_field = Text(extension_frame, height=1, width=18, highlightthickness=0, bg=main_bg)
+    photo_text_field.place(x=ref_x+220, y=ref_y)
+    photo_add_new_ext = Button(text='Добавить', activebackground=button_ab, bd=0,
+                               bg=button_bg).place(x=ref_x+20, y=ref_y+30)
+    photo_more_info = Button(image=down, activebackground=button_ab, bd=1, relief=SUNKEN, bg=main_bg)
+    photo_more_info.place(x=ref_x+180, y=ref_y+30)
+
     last_label_x_cord = ref_x
-    last_label_y_cord = ref_y+25    # need to calculate lines width and height
+    last_label_y_cord = ref_y+65    # need to calculate lines width and height
 
     types_sort_line1 = extension_frame.create_line(14, 95, 14, last_label_y_cord, fill=type_sort_lines_color)
     types_sort_line2 = extension_frame.create_line(14, 95, 24, 95, fill=type_sort_lines_color)
@@ -106,7 +116,8 @@ on_or_off.place(x=185, y=265)
 indicator = Label(root, image=notactive, bg=main_bg)
 indicator.place(x=162, y=266)
 
-launch_button = Button(root, image=off, highlightthickness=0, bd=0, bg=main_bg, activebackground=button_ab)
+launch_button = Button(root, image=off, highlightthickness=0, bd=1, relief=SUNKEN,
+                       bg=main_bg, activebackground=button_ab)
 launch_button.place(x=250, y=237)
 
 log_field = Text(width=400, height=15, state=DISABLED, bg=main_bg)
