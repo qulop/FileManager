@@ -4,20 +4,31 @@ import shutil
 import locale
 import getpass
 import translation
-import fileinput as fi
 
 log_file = 'logs.log'
+language_file = 'lang.conf'
 config_file = 'config.conf'
 
-try:
-    f1 = open(log_file, 'r'); f1.close()
-except FileNotFoundError:
-    open(log_file, 'w+')
-try:
-    f2 = open(config_file, 'r'); f2.close()
-except FileNotFoundError:
-    open(config_file, 'w+')
+logs = False; langs = False; confs = False
+for i in range(3):
+    try:
+        log = open(log_file, 'r')
+        logs = True; log.close()
 
+        lang = open(language_file, 'r')
+        langs = True; lang.close()
+
+        conf = open(config_file, 'r')
+        confs = True; conf.close()
+
+    except FileNotFoundError:
+        if (not logs) or (not langs) or (not confs):
+            if not logs:
+                open(log_file, 'w+')
+            elif not langs:
+                open(language_file, 'w+')
+            else:
+                open(config_file, 'w+')
 
 language = locale.getdefaultlocale(); language = language[0][:2]
 dirs = None
@@ -41,7 +52,6 @@ ways = {
     'vid': _from + dirs['Videos'] + '/',
     'aud': _from + dirs['Music'] + '/',
     'doc': _from + dirs['Documents'] + '/',
-    # 'arc': _from + dirs['docks'] + '/',
 }
 
 class Transfer:
@@ -176,8 +186,7 @@ docs = Transfer('doc')
 manager = Manager(images, audio, videos, docs)
 
 
-def start():
-    while True:
+while True:
         for root, dirs, files in os.walk(f'/home/{user}/Загрузки'):
             manager.start_manage(files)
         time.sleep(1.5)
