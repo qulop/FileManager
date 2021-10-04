@@ -7,10 +7,9 @@ import translation
 
 log_file = 'logs.log'
 language_file = 'lang.conf'
-config_file = 'config.conf'
 
 logs = False; langs = False; confs = False
-for i in range(3):
+for i in range(2):
     try:
         log = open(log_file, 'r')
         logs = True; log.close()
@@ -18,22 +17,17 @@ for i in range(3):
         lang = open(language_file, 'r')
         langs = True; lang.close()
 
-        conf = open(config_file, 'r')
-        confs = True; conf.close()
-
     except FileNotFoundError:
         if (not logs) or (not langs) or (not confs):
             if not logs:
                 open(log_file, 'w+')
-            elif not langs:
-                open(language_file, 'w+')
             else:
-                open(config_file, 'w+')
+                open(language_file, 'w+')
 
 language = locale.getdefaultlocale(); language = language[0][:2]
 dirs = None
 
-for line in open(config_file, 'r'):
+for line in open(language_file, 'r'):
     if eval(line)['Language'] == language:
         dirs = eval(line)
 
