@@ -1,4 +1,16 @@
 from tkinter import *
+import os.path as file
+
+file = file.exists('settings.conf')
+if not file:
+    first_launch = {
+    'type_sort': True,
+    'heap_sort': False,
+    'autoload': True,
+    'logs': True
+}
+    with open('settings.conf', 'w+') as settings:
+        settings.write(str(first_launch))
 
 root = Tk()
 
@@ -16,33 +28,72 @@ button_ab = button_bg  # ab - (active background)
 text_label_bg = button_bg
 
 
+in_add_ext = False
+in_special_files = False
+in_settings = False
+
+
+class Destroy:
+    def __init__(self, frame):
+        self.frame = frame
+
+    def add_widgets(self, *widgets):
+        self.widgets = widgets
+
+    def destroy(self):
+        for widget in self.widgets:
+            widget.destroy()
+        self.frame.destroy()
+
+
 def get_cursor_cords(event):
     print(f'X: {event.x}; Y: {event.y}')
 
 
 def add_extensions(event=None):
+    global in_add_ext
+    if in_add_ext:
+        return
+    else:
+        in_add_ext = True
+
     # ----CREATE A NEW FRAME----
     extension_frame = Canvas(root, width=400, height=300, bg=main_bg)
     extension_frame.place(x=0, y=0)
+    frame = Destroy(extension_frame)
     # --------------------------
 
     def add_ext_for_spec_type():
-        pass
+        tl_frame = Toplevel()   # tl - Top Level
+        tl_frame.config(bg='#adad85')
+        tl_frame.geometry('400x125+700+380')
+        tl_frame.resizable(width=False, height=False)
+        tl_frame.title('Photos')
+
+        main_label = Label(tl_frame, text='Запишите расширения через пробел: ', bg='#adad85')
+        main_label.place(x=53, y=5)
+
+        save_button = Button(tl_frame, text='Сохранить', highlightthickness=0, bd=0, bg='#999966',
+                      activebackground='#b8b894');      save_button.place(x=70, y=90)
+        cancel_button = Button(tl_frame, text='Отменить', highlightthickness=0, bd=0, bg='#999966', activebackground='#b8b894',
+                        command=lambda: tl_frame.destroy()).place(x=230, y=90)
+
+        enter_area = Text(tl_frame, width=48, height=3, bg='#c2c2a3', highlightthickness=0, bd=0)
+        enter_area.place(x=7, y=30)
 
     def destroy(event=None):
-        extension_frame.destroy()
-        for widget in widgets:
-            widget.destroy()
+        global in_add_ext
+        in_add_ext = False
+        frame.destroy()
 
-    widgets = []    # создаем массив ссылок на виджеты для возможности их(виджеты) стереть в случае выхода из фрейма
     ref_x = 30; ref_y = 130
     type_sort_lines_color = 'red'
 
     back_button = Button(text='Назад', bd=0, bg=button_bg, activebackground=button_bg, command=destroy)
     back_button.place(x=5, y=5)
-    widgets.append(back_button)
 
-    Label(text='Все просматриваемые расширения:', bg=main_bg).place(x=74, y=45)
+    all_ext = Label(text='Все просматриваемые расширения:', bg=main_bg)
+    all_ext.place(x=74, y=45)
     extension_frame.create_line(0, 70, 400, 70, fill='#cccccc')     # create a underline 1
 
     bool_var = BooleanVar()
@@ -53,16 +104,19 @@ def add_extensions(event=None):
     sort_by_types.place(x=ref_x-6, y=85)
 
     # ----PHOTOS----
-    Label(text='Расширения для фотографий:', bg=main_bg).place(x=ref_x, y=ref_y)
+    photo_ext = Label(text='Расширения для фотографий:', bg=main_bg);   photo_ext.place(x=ref_x, y=ref_y)
     photo_text_field = Text(extension_frame, height=1, width=18, highlightthickness=0, bg=main_bg)
     photo_text_field.place(x=ref_x+220, y=ref_y)
     photo_add_new_ext = Button(text='Добавить', activebackground=button_ab, bd=0,
-                               bg=button_bg).place(x=ref_x+20, y=ref_y+30)
+                               bg=button_bg, command=add_ext_for_spec_type)
+    photo_add_new_ext.place(x=ref_x+20, y=ref_y+30)
     photo_more_info = Button(image=down, activebackground=button_ab, bd=1, relief=SUNKEN, bg=main_bg)
     photo_more_info.place(x=ref_x+180, y=ref_y+30)
 
     last_label_x_cord = ref_x
     last_label_y_cord = ref_y+65    # need to calculate lines width and height
+
+    frame.add_widgets(all_ext, photo_ext, photo_add_new_ext, photo_more_info, back_button)
 
     types_sort_line1 = extension_frame.create_line(14, 95, 14, last_label_y_cord, fill=type_sort_lines_color)
     types_sort_line2 = extension_frame.create_line(14, 95, 24, 95, fill=type_sort_lines_color)
@@ -71,15 +125,39 @@ def add_extensions(event=None):
 
 
 
-    root.bind('<Escape>', destroy)
+    # root.bind('<Escape>', destroy)
 
 
 def special_files(event=None):
-    pass
+    global in_special_files
+    if in_special_files:
+        return
+    else:
+        in_special_files = True
+
+    def destroy(event=None):
+        global in_special_files
+        in_special_files = False
+
+    # root.bind('<Escape>', destroy)
+
 
 
 def settings(event=None):
-    pass
+    print('here2')
+    global in_settings
+    if in_settings:
+        return
+    else:
+        in_settings = True
+
+    def destroy(event=None):
+        global in_settings
+        in_settings = False
+
+    # root.bind('<Escape>', destroy)
+
+
 
 
 def help():
@@ -90,6 +168,7 @@ def help():
 root['bg'] = main_bg
 root.title('File manager')
 root.geometry('400x300+700+300')
+root.resizable(width=False, height=False)
 # -------------
 
 # ----MENU CREATE----
@@ -125,7 +204,9 @@ log_field.place(x=0, y=0)
 # ------------------
 
 # ----KEYS BIND----
-root.bind('<Control-e>', add_extensions)
+# root.bind('<Control-e>', add_extensions)
+# root.bind('<Control-d>', special_files)
+# root.bind('<Control-s>', settings)
 root.bind('<Button-1>', get_cursor_cords)
 # -----------------
 
