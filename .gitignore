@@ -1,3 +1,4 @@
-settings.conf
 config.conf
+lang.conf
 logs.log
+__pycache__

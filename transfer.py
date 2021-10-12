@@ -3,6 +3,7 @@ import time
 import shutil
 import locale
 import getpass
+import fileinput
 import translation
 
 log_file = 'logs.log'
@@ -103,6 +104,24 @@ class Transfer:
             postfix = 'mB'
         return '{0:.1f} {1}'.format(file_size, postfix)
 
+    def __logs(self, new_loc, size):
+        log = open('logs.log', 'r')
+        total = eval(log.readline())
+        total_moved_files = total['moved'] + 1
+        total_size = total['size'] + size
+
+        with fileinput.input(files='logs.log', inplace=True) as file:
+            for line in file:
+                if fileinput.lineno() == 1:
+                    print("{'moved': %d, 'size': %.1f" % (total_moved_files, total_size))
+                else:
+                    print(line, end='')
+
+        log = 'new location: ' + new_loc + '; size: ' + size + '; type: ' + self.type
+        file = open(log_file, 'a')
+        file.write(log + '\n\n')
+        file.close()
+
     def __move_special_files(self, file, _from,):
         for i in range(len(self.__special_files)):
             if file.find(self.__special_files[i]) != -1:
@@ -111,14 +130,7 @@ class Transfer:
                 file_size = self.__calculate_size(from_)
                 new_location = shutil.move(from_, to_)
                 if LOGS:
-                    log = 'new location: ' + new_location + '; size: ' + file_size + '; type: ' + self.type
-                    file = open(log_file, 'a'); file.write(log+'\n\n')
-                    file.close()
-                print(new_location, file_size)
-                # for fi.input(files='logs.log', inplace=True) as file:
-                #     for line in file:
-                #         if fi.lineno() == 1:
-                #             print('tot')
+                    self.__logs(new_location, file_size)
                 return 1
         return -1
 
@@ -142,10 +154,7 @@ class Transfer:
                 file_size = self.__calculate_size(from_)
                 new_location = shutil.move(from_, to_)
                 if LOGS:
-                    log = 'new location: ' + new_location + '; size: ' + file_size + '; type: ' + self.type
-                    file = open(log_file, 'a'); file.write(log+'\n\n')
-                    file.close()
-                print(new_location, file_size)
+                    self.__logs(new_location, file_size)
 
 
 class Manager:

@@ -178,7 +178,6 @@ log_field.place(x=0, y=0)
 root.bind('<Button-1>', a)
 root.bind('<Control-e>', add_extensions)
 
-root.mainloop()
 
 
 class MainScreen:
@@ -188,4 +187,5 @@ class MainScreen:
         self.root.title(title)
         self.root.geometry(geometry)
 
-
+a = 1.1
+print('%.1f' % (a))
