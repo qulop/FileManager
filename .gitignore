@@ -1,4 +1,10 @@
+# ----FILES, CREATED BY PROGRAM ITSELF----
 config.conf
 lang.conf
 logs.log
+
+# ----DIRS----
 __pycache__
+
+# ----TRASH FILES----
+gui.py

@@ -55,7 +55,7 @@ stack_sort.set(0)
 
 # ----HEAD----
 root['bg'] = main_bg
-root.title('File Manager')
+root.title('НЕГРЫ ПИДОРАСЫ')
 root.geometry('400x300+700+300')
 root.resizable(width=False, height=False)
 # -------------
@@ -92,6 +92,39 @@ class AddTypeWidget:
             widget.destroy()
 
     def __add_ext_for_spec_type(self):
+        def save(event=None):
+            if enter_area.get(1.0, END) == '\n':
+                tl_frame.destroy()
+
+            extensions = enter_area.get(1.0, END)
+            extensions = extensions.rstrip()
+            extensions = extensions.split(' ')
+            print(extensions)
+            for i in open('config.conf', 'r').readlines():
+                if self.type in i:
+                    old_string = i
+                    new_string = eval(i[i.find('=')+1:])
+                    break
+
+            for i in extensions:
+                if i == ' ' or i == '\n':
+                    continue
+                new_string.append(i)
+
+            new_string = f'{self.type}' + '=' + str(new_string) + '\n'
+            print(new_string)
+            print(old_string)
+
+            with open('config.conf', 'r') as file:
+                data = file.read()
+                data = data.replace(old_string, new_string)
+            print(data)
+            with open('config.conf', 'w') as file:
+                file.write(data)
+
+
+            tl_frame.destroy()
+
         tl_frame = Toplevel()   # tl - Top Level
         tl_frame.config(bg=main_bg)   # bg='#adad85'
         tl_frame.geometry('400x125+700+380')
@@ -102,12 +135,14 @@ class AddTypeWidget:
         main_label.place(x=60, y=5)
 
         save_button = Button(tl_frame, text='Сохранить', highlightthickness=0, bd=0, bg=button_bg,      #  bg='#999966,  activebackground='#b8b894'
-                      activebackground=button_ab);      save_button.place(x=70, y=90)
+                      activebackground=button_ab, command=save);      save_button.place(x=70, y=90)
         cancel_button = Button(tl_frame, text='Отменить', highlightthickness=0, bd=0, bg=button_bg, activebackground=button_ab,
                         command=lambda: tl_frame.destroy()).place(x=230, y=90)
 
         enter_area = Text(tl_frame, width=48, height=3, bg=text_label_bg, highlightthickness=0, bd=0)   # '#c2c2a3'
         enter_area.place(x=7, y=30)
+
+        # tl_frame.bind('<Enter>', save)
 
     def __insert_extensions(self):
         configure_file = open('config.conf', 'r')
@@ -147,11 +182,6 @@ class AddTypeWidget:
         more_info.place(x=275, y=self.indent_by_y+30)
 
         self.__all_widgets = [text_label, self.__text_field, self.add_extensions, more_info]
-
-        # video_more_info.place(x=ref_x + 245, y=ref_y + 110)
-        #
-        # photo_text_field = Text(extension_frame, height=1, width=18, highlightthickness=0, bg=main_bg)
-        # photo_text_field.place(x=250, y=130)
 
 
 class DeleteWidgets:
@@ -250,14 +280,13 @@ def add_extensions(event=None):
     to_destroy_wid = DeleteWidgets(photo, video, documents, audios, archives)
     to_destroy_head = Destroy(extension_frame, back_button, all_ext)
 
-    # frame.add_widgets(all_ext, photo_ext, photo_add_new_ext, back_button, video_ext, video_add_new_ext,
-    #                   video_more_info, photo_more_info)
+
     disabled = [photo.add_extensions, video.add_extensions]
 
-    types_sort_line1 = extension_frame.create_line(14, 95, 14, last_label_y_cord) # fill=type_sort_lines_color)
-    types_sort_line2 = extension_frame.create_line(14, 95, 24, 95) # fill=type_sort_lines_color)
+    types_sort_line1 = extension_frame.create_line(14, 95, 14, last_label_y_cord)
+    types_sort_line2 = extension_frame.create_line(14, 95, 24, 95)
     types_sort_line3 = extension_frame.create_line(14, last_label_y_cord, 24, last_label_y_cord)
-                                                   # fill=type_sort_lines_color)
+
     lines = []
     lines.append([types_sort_line1, types_sort_line2,  types_sort_line3])
 
@@ -284,7 +313,7 @@ def special_files(event=None):
         global in_special_files
         in_special_files = False
 
-        frame.destroy()
+        frame.delete()
 
     ref_x = 30; ref_y = 105
 
@@ -348,13 +377,6 @@ def settings(event=None):
 def help():
     pass
 
-
-# ----HEAD----
-root['bg'] = main_bg
-root.title('File Manager')
-root.geometry('400x300+700+300')
-root.resizable(width=False, height=False)
-# -------------
 
 # ----MENU CREATE----
 menu = Menu(root, bg='#404040')
