@@ -22,8 +22,7 @@ def a(event):
     y = event.y
     print(x, y)
 
-down = PhotoImage(file='icons/down.png')
-up = PhotoImage(file='icons/up.png')
+
 
 extension=0
 def add_extensions(event=None):
@@ -177,6 +176,7 @@ log_field.place(x=0, y=0)
 # root.protocol("WM_DELETE_WINDOW", close)
 root.bind('<Button-1>', a)
 root.bind('<Control-e>', add_extensions)
+root.mainloop()
 
 
 

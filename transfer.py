@@ -3,7 +3,6 @@ import time
 import shutil
 import locale
 import getpass
-import fileinput
 import translation
 
 log_file = 'logs.log'
@@ -58,11 +57,23 @@ class Transfer:
         self.__all_types = ['doc', 'vid', 'img', 'aud']
         if type not in self.__all_types:
             raise 'the file type, when you specified does not exist or is not supported by this version of the utility'
-        self.img = ['png', 'jpg', 'ora']
-        self.doc = ['pdf', 'docx', 'doc', 'djvu']
-        self.vid = ['mp4', 'avi', 'mov', 'mkv', 'm4v']
-        self.aud = ['mp3', 'aiff', 'au']
-        self.arh = ['7z', 'jar', 'deb', 'rar', 'zip']
+
+        file = open('config.conf', 'r')
+
+        for line in file .readlines():
+            where_to_look = line[:line.find('=')]
+            what_to_keep = line[line.find('=')+1:]
+
+            if where_to_look == 'img':
+                self.img = what_to_keep
+            elif where_to_look == 'vid':
+                self.vid = what_to_keep
+            elif where_to_look == 'doc':
+                self.doc = what_to_keep
+            elif where_to_look == 'aud':
+                self.aud = what_to_keep
+            else:
+                self.arh = what_to_keep
 
         ratios = {
             'img': self.img,
@@ -104,18 +115,57 @@ class Transfer:
             postfix = 'mB'
         return '{0:.1f} {1}'.format(file_size, postfix)
 
-    def __logs(self, new_loc, size):
-        log = open('logs.log', 'r')
-        total = eval(log.readline())
-        total_moved_files = total['moved'] + 1
-        total_size = total['size'] + size
+    def __convert_size(self, size: float, postfix: str = 'mb', current_postfix: str = 'gb') -> float:
+        convert_to_mb = {
+            'b': lambda x: x / 1e+6,
+            'kb': lambda x: x / 1000,
+            'mb': lambda x: x,
+        }
 
-        with fileinput.input(files='logs.log', inplace=True) as file:
-            for line in file:
-                if fileinput.lineno() == 1:
-                    print("{'moved': %d, 'size': %.1f" % (total_moved_files, total_size))
-                else:
-                    print(line, end='')
+        convert_to_gb = {
+            'b': lambda x: x / 1e+9,
+            'kb': lambda x: x / 1e+6,
+            'mb': lambda x: x / 1000,
+            'gb': lambda x: x
+        }
+
+        if current_postfix == 'mb':
+            new_size = convert_to_mb[postfix](size)
+        else:
+            new_size = convert_to_gb[postfix](size)
+
+        return new_size
+
+
+    def __logs(self, new_loc, size):
+        for line in open('config.conf', 'r').readlines():
+            if line[:line.find('=')] == 'stats':
+                old = line
+
+        new = eval(old[old.find('=')+1:])
+        total_files_size = new['size']
+        postfix_for_current_file = size.split(' ')[1]
+        postfix_for_moved_files = new['postfix']
+
+        convert_size = self.__convert_size(float(size.split(' ')[0]),
+                                 postfix_for_current_file.lower(),
+                                 postfix_for_moved_files)
+
+        total_files_size += convert_size
+        if postfix_for_moved_files == 'mb' and total_files_size > 1000:
+            total_files_size = self.__convert_size(total_files_size)
+            new['postfix'] = 'gb'
+
+        new['size'] = round(total_files_size, 2)
+        new['moved'] += 1
+        new = 'stats=' + str(new) + '\n'
+
+
+        with open('config.conf', 'r') as file:
+            data = file.read()
+            data = data.replace(old, new)
+        with open('config.conf', 'w') as file:
+            file.write(data)
 
         log = 'new location: ' + new_loc + '; size: ' + size + '; type: ' + self.type
         file = open(log_file, 'a')
@@ -172,14 +222,6 @@ class Create:
         self.new_type_extensions = extensions
 
 
-# for future gui app
-img = ['*.png', '*.jpg', '*.ora']
-aud = ['*.mp3', '*.aiff', '*.au']
-vid = ['*.mp4', '*.avi', '*.mov', '*.mkv', '*.m4v']
-doc = ['*.pdf', '*.docx', '*.doc']
-text = ['*.txt']
-# ----
-
 images = Transfer('img')
 images.add_special_moves(['minah'], ['chaesu'])
 audio = Transfer('aud')
@@ -187,7 +229,6 @@ videos = Transfer('vid')
 docs = Transfer('doc')
 
 manager = Manager(images, audio, videos, docs)
-
 
 while True:
         for root, dirs, files in os.walk(f'/home/{user}/Загрузки'):
