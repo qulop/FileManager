@@ -1,6 +1,5 @@
 from tkinter import *
 import tkinter.font as font
-import tkinter.messagebox as dialog
 import os.path as file
 
 root = Tk()
@@ -21,8 +20,8 @@ geometry_for_tl_frame_sp_files = f'400x200+{height}-{width_for_tl_frame}'
 config = file.exists('config.conf')
 logs = file.exists('logs.log')
 
-if not config or not logs:
-    first_launch_confs = "stats={'moved': 0, 'size': 0.0, 'postfix': 'mb'}\n" \
+if not config:
+    first_launch_configs = "stats={'moved': 0, 'size': 0, 'postfix': 'mb'}\n" \
         "img=['png', 'jpg', 'ora', 'jpeg']\n" \
         "vid=['mp4', 'avi', 'mov', 'mkv', 'm4v']\n" \
         "doc=['pdf', 'docx', 'doc', 'djvu']\n" \
@@ -30,19 +29,15 @@ if not config or not logs:
         "arh=['7z', 'jar', 'deb', 'rar', 'zip']\n\n"\
         "special=[]"
 
-    first_launch_logs = {
-        'moved': 0,
-        'size': 0.0
-    }
+    with open('config.conf', 'w+') as configs:
+        configs.write(first_launch_configs)
 
-    with open('config.conf', 'w+') as confs:
-        confs.write(first_launch_confs)
-    with open('logs.log', 'w+') as log:
-        log.write(str(first_launch_logs))
+if not logs:
+    open('logs.log', 'w+')
 
 
 active = PhotoImage(file='icons/active.png')
-notactive = PhotoImage(file='icons/notactive.png')
+not_active = PhotoImage(file='icons/not-active.png')
 on = PhotoImage(file='icons/switch-on.png')
 off = PhotoImage(file='icons/switch-off.png')
 nothing_found = PhotoImage(file='icons/nothing-found.png')
@@ -52,11 +47,6 @@ text_fg = '#b3b3b3'
 button_bg = '#666666'
 button_ab = '#8c8c8c'  # ab - (active background)
 text_label_bg = button_bg
-
-for line in open('config.conf', 'r').readlines():
-    if line[:line.find('=')] == 'total_moved':
-        total_moved = line[line.find('=') + 1:]
-
 
 
 in_add_ext = False
@@ -89,34 +79,85 @@ class Destroy:
 
 
 class MainFrame:
-    def __init__(self, total_moved):
-        if total_moved == 0:
-            self.__first_launch()
-        else:
-            self.__create_frame()
+    def __init__(self):
+        self.main_frame = Canvas(root, width=400, height=300, bg=main_bg)
+        self.main_frame.place(x=0, y=0)
+        self.__create_frame()
 
     def __frame_bottom(self):
-        status = Label(root, text='Текущее состояние: ', bg=main_bg)
+        status = Label(self.main_frame, text='Текущее состояние: ', bg=main_bg)
         status.place(x=10, y=265)
 
-        on_or_off = Label(root, text='(выкл)', bg=main_bg)
+        on_or_off = Label(self.main_frame, text='(выкл)', bg=main_bg)
         on_or_off.place(x=185, y=265)
 
-        indicator = Label(root, image=notactive, bg=main_bg)
+        indicator = Label(self.main_frame, image=not_active, bg=main_bg)
         indicator.place(x=162, y=266)
 
-        launch_button = Button(root, image=off, highlightthickness=0, bd=0, relief=SUNKEN,
-                               bg=main_bg, activebackground=button_ab)
-        launch_button.place(x=250, y=237)
+        launch_button = Button(self.main_frame, text='Включить', bd=0, bg=main_bg, activebackground=button_ab)
+        launch_button.place(x=250, y=261)
 
-    def __first_launch(self):
-        self.__frame_bottom()
+    def insert_file_statistics(self):
+        statistic = open('config.conf', 'r')
+        statistic = str(statistic.readlines())
+        statistic = eval(statistic[statistic.find('=')+1: statistic.find('}')+1])
+        ru_postfixes = {
+            'mb': 'Мб',
+            'gb': 'Гб'
+        }
+
+        files = statistic['moved']
+        size = statistic['size']
+        postfix = ru_postfixes[statistic['postfix']]
+
+        lines = []
+        index = 0
+        for line in open('logs.log', 'r').readlines():
+            lines.append(line)
+
+            index += 1
+            if index == 6:
+                break
+
+        last_changes = []
+        for line in lines:
+            if line != '\n':
+                last_changes.append(line.rstrip())
+
+        for key, event in enumerate(last_changes):
+            meta_event = last_changes[key]
+            meta_event = meta_event[meta_event.find('/'): meta_event.find(';')]
+            if len(meta_event) > 47:
+                meta_event = meta_event[:47] + '...'
+            last_changes[key] = meta_event
+        print(last_changes)
+
+        for i in range(len(last_changes)):
+            index = float(i)
+            self.__log_field.insert(index, '\n\n'+last_changes[i])
+            # self.__log_field.insert(index, '\n\n')
+            print(last_changes[i])
+            # self.__log_field.insert(index, '\n')
+
+        self.__quantity_of_moved_files['text'] = f'Всего премещено файлов: {files}'
+        self.__totalen_bruh['text'] = f'Общий размер всех файлов: {size} {postfix}'
 
     def __create_frame(self):
         self.__frame_bottom()
 
-        log_field = Text(width=400, height=15, state=NORMAL, bg=main_bg)
-        log_field.place(x=0, y=0)
+        self.__quantity_of_moved_files = Label(self.main_frame, bg=main_bg)
+        self.__quantity_of_moved_files.place(x=100, y=10)
+
+        self.__totalen_bruh = Label(self.main_frame, bg=main_bg)
+        self.__totalen_bruh.place(x=75, y=40)
+
+        Label(self.main_frame, text='Последние изменения:', bg=main_bg).place(x=115, y=75)
+
+        self.main_frame.create_line(0, 67, 400, 67, fill='#cccccc')
+
+        self.__log_field = Text(self.main_frame, width=400, height=9, state=NORMAL, highlightthickness=0, bg=main_bg)
+        self.__log_field.place(x=1, y=100)
+        self.insert_file_statistics()
 
 
 class AddTypeWidget:
@@ -129,11 +170,11 @@ class AddTypeWidget:
             'aud': 'аудиофайлов'
         }
         self.tl_frame_titles = {
-            'img': 'Photos',
-            'vid': 'Videos',
-            'doc': 'Documents',
-            'arh': 'Archives',
-            'aud': 'Audio'
+            'img': 'Фотографии',
+            'vid': 'Видеофайлы',
+            'doc': 'Докумменты',
+            'arh': 'Архивы',
+            'aud': 'Аудиофайлы'
         }
         self.type = type
         self.num_of_string = num_of_string
@@ -571,8 +612,8 @@ menu.add_command(label='Справка', activebackground=button_ab, command=hel
 # log_field.config(command=insert_text_on_main_screen())
 # ------------------
 
-a = MainFrame(1)
-
+main_frame = MainFrame()
+# root.after(1000, main_frame.insert_file_statistics)
 
 # ----KEYS BIND----
 root.bind('<Control-e>', add_extensions)
