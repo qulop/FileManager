@@ -25,6 +25,7 @@ for i in range(2):
                 open(language_file, 'w+')
 
 language = locale.getdefaultlocale(); language = language[0][:2]
+print(language)
 dirs = None
 
 for line in open(language_file, 'r'):
@@ -32,7 +33,8 @@ for line in open(language_file, 'r'):
         dirs = eval(line)
 
 if not dirs:
-    dirs = translation.translate(language)
+    dirs = translation.translate_to_other_lang(language)
+print(dirs)
 
 user = getpass.getuser()
 LOGS = True
@@ -48,19 +50,16 @@ ways = {
     'doc': _from + dirs['Documents'] + '/',
 }
 
+
 class Transfer:
-    def __init__(self, type: str):
+    def __init__(self, file_type: str):
         '''
         :param type: File type. Available types: 'doc', 'vid', 'img', 'aud', 'arh'.
         '''
 
-        self.__all_types = ['doc', 'vid', 'img', 'aud']
-        if type not in self.__all_types:
-            raise 'the file type, when you specified does not exist or is not supported by this version of the utility'
-
         file = open('config.conf', 'r')
 
-        for line in file .readlines():
+        for line in file.readlines():
             where_to_look = line[:line.find('=')]
             what_to_keep = line[line.find('=')+1:]
 
@@ -83,10 +82,10 @@ class Transfer:
             'doc': self.doc
         }
 
-        self.__extensions = ratios[type]
+        self.__extensions = ratios[file_type]
         self.sp = False
-        self.type = type
-        self.path = ways[type]
+        self.type = file_type
+        self.path = ways[file_type]
 
     def add_special_moves(self, special_files: list, special_dirs: list):
         self.__special_files = special_files
@@ -201,6 +200,7 @@ class Transfer:
 
                 to_ = self.path + file
                 from_ = _from + file
+                print(from_)
                 file_size = self.__calculate_size(from_)
                 new_location = shutil.move(from_, to_)
                 if LOGS:
@@ -222,15 +222,41 @@ class Create:
         self.new_type_extensions = extensions
 
 
+class Utility:
+    def __init__(self, manager: Manager):
+        self.__manager = manager
+        self.__break_mainloop = False
+
+    def start(self, is_exit: int):
+        while True:
+            if is_exit == 0:
+                break
+
+            for root, dirs, files in os.walk(f'/home/{user}/Загрузки'):
+                self.__manager.start_manage(files)
+            time.sleep(1.5)
+
+    def exit(self):
+        self.__break_mainloop = False
+
+
 images = Transfer('img')
-images.add_special_moves(['minah'], ['chaesu'])
+images.add_special_moves(['minah', 'feet'], ['chaesu', 'feet'])
 audio = Transfer('aud')
 videos = Transfer('vid')
 docs = Transfer('doc')
 
 manager = Manager(images, audio, videos, docs)
+stop_utility = False
+go_to_downloads = dirs['Downloads']
 
 while True:
-        for root, dirs, files in os.walk(f'/home/{user}/Загрузки'):
-            manager.start_manage(files)
-        time.sleep(1.5)
+    for root, dirs, files in os.walk(f'/home/{user}/{go_to_downloads}'):
+        manager.start_manage(files)
+    time.sleep(1.5)
+
+
+def stop():
+    global stop_utility
+
+    stop_utility = True

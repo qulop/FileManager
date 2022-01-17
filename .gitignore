@@ -6,5 +6,8 @@ logs.log
 # ----DIRS----
 __pycache__
 
-# ----TRASH FILES----
-gui.py
+# ---FOR MYSELF----
+test.py
+
+# ----OTHER FILES----
+notes.txt

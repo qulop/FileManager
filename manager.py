@@ -1,30 +1,34 @@
+import math
+import time
+import os.path as path
 from tkinter import *
 import tkinter.font as font
-import os.path as file
+from threading import Thread
+from PIL import Image
+from PIL import ImageTk
+
 
 root = Tk()
 
+app_width = 600
+app_height = 400
 
-height = root.winfo_screenwidth()
-width = root.winfo_screenheight()
+screen_height = root.winfo_screenwidth()
+screen_width = root.winfo_screenheight()
 
-height = (height // 2) - 200
-width_for_main_frame = (width // 2) - 200
-width_for_tl_frame = (width // 2) - 74       # tl_frame - top level frame
+center_by_y = (screen_height // 2) - 200
+center_by_x_for_mf = (screen_width // 2) - 200  # mf - main frame
+center_by_x_for_tlf = (screen_height // 2) - 74       # tlf - top level frame
 
-geometry_for_main_frame = f'400x300+{height}+{width_for_main_frame}'
-geometry_for_tl_frame = f'400x150+{height}+{width_for_tl_frame}'
-geometry_for_tl_frame_sp_files = f'400x200+{height}-{width_for_tl_frame}'
+geometry_for_main_frame = f'{app_width}x{app_height}+{center_by_y}+{center_by_x_for_mf}'
+geometry_for_tl_frame = f'400x150+{center_by_y}+{center_by_x_for_tlf}'
+geometry_for_tl_frame_sp_files = f'400x200+{center_by_y}-{center_by_x_for_tlf}'
 
-
-config = file.exists('config.conf')
-logs = file.exists('logs.log')
-
-if not config:
+if not path.exists('config.conf'):
     first_launch_configs = "stats={'moved': 0, 'size': 0, 'postfix': 'mb'}\n" \
         "img=['png', 'jpg', 'ora', 'jpeg']\n" \
         "vid=['mp4', 'avi', 'mov', 'mkv', 'm4v']\n" \
-        "doc=['pdf', 'docx', 'doc', 'djvu']\n" \
+        "doc=['pdf', 'docx', 'doc', 'djvu', 'odt', 'pptx', 'rtf']\n" \
         "aud=['mp3', 'aiff', 'au']\n" \
         "arh=['7z', 'jar', 'deb', 'rar', 'zip']\n\n"\
         "special=[]"
@@ -32,15 +36,14 @@ if not config:
     with open('config.conf', 'w+') as configs:
         configs.write(first_launch_configs)
 
-if not logs:
+if not path.exists('logs.log'):
     open('logs.log', 'w+')
 
 
+# ?????????????????????????????????????????????
 active = PhotoImage(file='icons/active.png')
 not_active = PhotoImage(file='icons/not-active.png')
-on = PhotoImage(file='icons/switch-on.png')
-off = PhotoImage(file='icons/switch-off.png')
-nothing_found = PhotoImage(file='icons/nothing-found.png')
+# ?????????????????????????????????????????????
 
 main_bg = '#4d4d4d'
 text_fg = '#b3b3b3'
@@ -59,109 +62,142 @@ types_sort.set(1)
 stack_sort = BooleanVar()
 stack_sort.set(0)
 
-# ----HEAD----
 root['bg'] = main_bg
 root.title('Aid')
 root.geometry(geometry_for_main_frame)
 root.resizable(width=False, height=False)
-# -------------
 
 
-class Destroy:
-    def __init__(self, frame, *widgets):
-        self.frame = frame
-        self.widgets = widgets
+def place_widget_on_center(widget, center_by: str):
+    if center_by not in ['x', 'y']:
+        raise ValueError('bad argument -> center_by: Available parameters - x or y')
 
-    def delete(self):
-        for widget in self.widgets:
+    root.update()
+    widget_x_center = widget.winfo_width // 2
+
+
+class FileInfoBtn:
+    def __init__(self, root, file_name: str, file_info, file_image: Image = None):
+        img = ['png', 'jpg', 'ora', 'jpeg', 'bmp', 'gif']
+
+        self._root = root
+        self._name = file_name[file_name.rfind("/")+1:]
+        self._info = file_info
+
+        if self._name[self._name.find('.')+1:] in img:
+            self._image = Image.open(file_name)
+        elif not file_image:
+            self._image = Image.open("icons/preview_template.png")
+        else:
+            self._image = file_image
+
+        self._image = ImageTk.PhotoImage(self._image)
+
+        self._frame = Canvas(self._root, width=150, height=150, bg=main_bg, highlightthickness=1)
+
+    @staticmethod
+    def __scaling_image(image, scale_width=150):
+        (width, height) = image.size
+        divider = math.ceil(width / scale_width)
+
+        return (width // divider, height // divider)
+
+    def place(self, x, y):
+        self._frame.place(x=x, y=y)
+        self._frame.create_image(75, 60, image=self._image)
+        self._frame.create_text(75, 130, text=self._name, justify='center')
+
+
+class AddExtensions:
+    def __init__(self, root):
+        self.__root = root
+        self.__frame = Canvas(self.__root, width=400, height=300, bg=main_bg)
+        self.__frame.place(x=0, y=0)
+
+    def destroy_frame(self):
+        global in_add_ext
+        in_add_ext = False
+
+        for widget in self.__generated_widgets:
+            widget.delete_widgets()
+
+        for widget in self.__head_widgets:
             widget.destroy()
-        self.frame.destroy()
 
-
-class MainFrame:
-    def __init__(self):
-        self.main_frame = Canvas(root, width=400, height=300, bg=main_bg)
-        self.main_frame.place(x=0, y=0)
-        self.__create_frame()
-
-    def __frame_bottom(self):
-        status = Label(self.main_frame, text='Текущее состояние: ', bg=main_bg)
-        status.place(x=10, y=265)
-
-        on_or_off = Label(self.main_frame, text='(выкл)', bg=main_bg)
-        on_or_off.place(x=185, y=265)
-
-        indicator = Label(self.main_frame, image=not_active, bg=main_bg)
-        indicator.place(x=162, y=266)
-
-        launch_button = Button(self.main_frame, text='Включить', bd=0, bg=main_bg, activebackground=button_ab)
-        launch_button.place(x=250, y=261)
-
-    def insert_file_statistics(self):
-        statistic = open('config.conf', 'r')
-        statistic = str(statistic.readlines())
-        statistic = eval(statistic[statistic.find('=')+1: statistic.find('}')+1])
-        ru_postfixes = {
-            'mb': 'Мб',
-            'gb': 'Гб'
+    def __sort_according_by_type(self):
+        global types_sort
+        lines = [j for i in self.__canvas_lines for j in i]
+        val = types_sort.get()
+        color = {
+            0: 'red',
+            1: '#00ff00'
         }
 
-        files = statistic['moved']
-        size = statistic['size']
-        postfix = ru_postfixes[statistic['postfix']]
+        for i in lines:
+            self.__frame.itemconfig(i, fill=color[val])
 
-        lines = []
-        index = 0
-        for line in open('logs.log', 'r').readlines():
-            lines.append(line)
+        for button in self.__disable_or_enable_buttons:
+            if val == 0:
+                button.configure(state=DISABLED)
+            else:
+                button.configure(state=NORMAL)
 
-            index += 1
-            if index == 6:
-                break
+    def add_content(self):
+        # ----HEAD----
+        self.__back_button = Button(text='Назад', bd=0, bg=button_bg, activebackground=button_bg,
+                                    command=self._destroy_frame)
+        self.__back_button.place(x=5, y=5)
 
-        last_changes = []
-        for line in lines:
-            if line != '\n':
-                last_changes.append(line.rstrip())
+        self.__caption_font_size = font.Font(size=12)
+        self.__all_ext = Label(text='Все просматриваемые расширения:', bg=main_bg, font=self.__caption_font_size)
+        self.__all_ext.place(x=50, y=45)
+        self.__frame.create_line(0, 70, 400, 70, fill='#cccccc')  # create a underline 1
 
-        for key, event in enumerate(last_changes):
-            meta_event = last_changes[key]
-            meta_event = meta_event[meta_event.find('/'): meta_event.find(';')]
-            if len(meta_event) > 47:
-                meta_event = meta_event[:47] + '...'
-            last_changes[key] = meta_event
-        print(last_changes)
+        self.__sort_by_types = Checkbutton(self.__frame, variable=types_sort, onvalue=1, offvalue=0,
+                                    text='Сортровать файлы согласно их типам',
+                                    bg=main_bg, activebackground=main_bg,
+                                    highlightthickness=0,
+                                    command=self.__sort_according_by_type)  # checkbox
+        self.__sort_by_types.place(x=24, y=85)
+        # ------------
 
-        for i in range(len(last_changes)):
-            index = float(i)
-            self.__log_field.insert(index, '\n\n'+last_changes[i])
-            # self.__log_field.insert(index, '\n\n')
-            print(last_changes[i])
-            # self.__log_field.insert(index, '\n')
+        self._photo = AddContentToSettingsFrame(self.__frame, 'img', 0)
+        self._photo.add_widget()
 
-        self.__quantity_of_moved_files['text'] = f'Всего премещено файлов: {files}'
-        self.__totalen_bruh['text'] = f'Общий размер всех файлов: {size} {postfix}'
+        self._video = AddContentToSettingsFrame(self.__frame, 'vid', 1)
+        self._video.add_widget()
 
-    def __create_frame(self):
-        self.__frame_bottom()
+        self._documents = AddContentToSettingsFrame(self.__frame, 'doc', 2)
+        self._documents.add_widget()
 
-        self.__quantity_of_moved_files = Label(self.main_frame, bg=main_bg)
-        self.__quantity_of_moved_files.place(x=100, y=10)
+        self._audios = AddContentToSettingsFrame(self.__frame, 'aud', 3)
+        self._audios.add_widget()
 
-        self.__totalen_bruh = Label(self.main_frame, bg=main_bg)
-        self.__totalen_bruh.place(x=75, y=40)
+        self._archives = AddContentToSettingsFrame(self.__frame, 'arh', 4)
+        self._archives.add_widget()
 
-        Label(self.main_frame, text='Последние изменения:', bg=main_bg).place(x=115, y=75)
+        self.__generated_widgets = [self._photo, self._video, self._documents,
+                                    self._documents, self._audios, self._archives]
 
-        self.main_frame.create_line(0, 67, 400, 67, fill='#cccccc')
+        self.__disable_or_enable_buttons = []
+        for button in self.__generated_widgets:
+            self.__disable_or_enable_buttons.append(button.add_extensions)
 
-        self.__log_field = Text(self.main_frame, width=400, height=9, state=NORMAL, highlightthickness=0, bg=main_bg)
-        self.__log_field.place(x=1, y=100)
-        self.insert_file_statistics()
+        self.__head_widgets = [self.__frame, self.__sort_by_types, self.__back_button, self.__all_ext]
+
+        self.__coord_of_the_last_widget = self._archives._indent_by_y+65+80
+        self._types_sort_line1 = self.__frame.create_line(14, 95, 14, self.__coord_of_the_last_widget)
+        self._types_sort_line2 = self.__frame.create_line(14, 95, 24, 95)
+        self._types_sort_line3 = self.__frame.create_line(14, self.__coord_of_the_last_widget, 24,
+                                                       self.__coord_of_the_last_widget)
+        self.__canvas_lines = [self._types_sort_line1, self._types_sort_line2, self._types_sort_line3]
+
+        self.__sort_according_by_type()
 
 
-class AddTypeWidget:
+class AddContentToSettingsFrame(AddExtensions):
     def __init__(self, root, type, num_of_string):
+        super().__init__(root)
         self.__postfixes = {
             'img': 'фотографий',
             'vid': 'видеофайлов',
@@ -169,32 +205,34 @@ class AddTypeWidget:
             'arh': 'архивов',
             'aud': 'аудиофайлов'
         }
-        self.tl_frame_titles = {
+
+        # tl - top level (enc.)
+        self.__tl_frame_titles = {
             'img': 'Фотографии',
             'vid': 'Видеофайлы',
             'doc': 'Докумменты',
             'arh': 'Архивы',
             'aud': 'Аудиофайлы'
         }
-        self.type = type
-        self.num_of_string = num_of_string
-        self.root = root
-        self.ref_x = 30
-        self.ref_y = 130
+        self.__type = type
+        self.__num_of_string = num_of_string
+        self.__root = root
+        self.__ref_y = 130
 
-    def __del__(self):
+    def delete_widgets(self):
         for widget in self.__all_widgets:
             widget.destroy()
 
-    def __is_empty(self, strng: str):
-        for i in strng:
+    @staticmethod
+    def __is_empty(string: str):
+        for i in string:
             print(i)
             if i != '':
                 return False
         return True
 
     def __add_ext_for_spec_type(self):
-        def save(event=None):
+        def save():
             extensions = enter_area.get(1.0, END)
             extensions = extensions.strip()
             extensions = extensions.split(' ')
@@ -211,7 +249,7 @@ class AddTypeWidget:
                 return
 
             for i in open('config.conf', 'r').readlines():
-                if self.type in i:
+                if self.__type in i:
                     old_string = i
                     new_string = eval(i[i.find('=')+1:])
                     break
@@ -222,7 +260,7 @@ class AddTypeWidget:
                 print(i)
                 new_string.append(i)
 
-            new_string = f'{self.type}' + '=' + str(new_string) + '\n'
+            new_string = f'{self.__type}' + '=' + str(new_string) + '\n'
 
             with open('config.conf', 'r') as file:
                 data = file.read()
@@ -230,22 +268,22 @@ class AddTypeWidget:
             with open('config.conf', 'w') as file:
                 file.write(data)
 
-
             tl_frame.destroy()
 
         tl_frame = Toplevel()   # tl - Top Level
         tl_frame.config(bg=main_bg)   # bg='#adad85'
         tl_frame.geometry(geometry_for_tl_frame)
         tl_frame.resizable(width=False, height=False)
-        tl_frame.title(self.tl_frame_titles[self.type])
+        tl_frame.title(self.__tl_frame_titles[self.__type])
 
         main_label = Label(tl_frame, text='Запишите расширения через пробел: ', bg=main_bg)
         main_label.place(x=60, y=5)
 
-        save_button = Button(tl_frame, text='Сохранить', highlightthickness=0, bd=0, bg=button_bg,      #  bg='#999966,  activebackground='#b8b894'
-                      activebackground=button_ab, command=save);      save_button.place(x=70, y=110)
-        cancel_button = Button(tl_frame, text='Отменить', highlightthickness=0, bd=0, bg=button_bg, activebackground=button_ab,
-                        command=lambda: tl_frame.destroy()).place(x=230, y=110)
+        save_button = Button(tl_frame, text='Сохранить', highlightthickness=0, bd=0, bg=button_bg,
+                             activebackground=button_ab, command=save)  #  bg='#999966,  activebackground='#b8b894'
+        save_button.place(x=70, y=110)
+        cancel_button = Button(tl_frame, text='Отменить', highlightthickness=0, bd=0, bg=button_bg,
+                               activebackground=button_ab, command=lambda: tl_frame.destroy()).place(x=230, y=110)
 
         enter_area = Text(tl_frame, width=48, height=4, bg=text_label_bg, highlightthickness=0, bd=0)   # '#c2c2a3'
         enter_area.place(x=7, y=35)
@@ -256,7 +294,7 @@ class AddTypeWidget:
         extensions = ''
 
         for line in configure_file:
-            if line[:line.find('=')] == self.type:
+            if line[:line.find('=')] == self.__type:
                 extensions = eval(line[line.find('=')+1:])
                 break
         for i in extensions:
@@ -268,52 +306,135 @@ class AddTypeWidget:
         pass
 
     def add_widget(self):
-        self.indent_by_y = self.ref_y + (80 * self.num_of_string)
+        self._indent_by_y = self.__ref_y + (80 * self.__num_of_string)
 
-        text_label = Label(self.root, text=f'Расширения для {self.__postfixes[self.type]}:', bg=main_bg)
-        text_label.place(x=30, y=self.indent_by_y)
+        text_label = Label(self.__root, text=f'Расширения для {self.__postfixes[self.__type]}:', bg=main_bg)
+        text_label.place(x=30, y=self._indent_by_y)
 
         root.update()
         text_x = 30 + text_label.winfo_width() + 5
         text_width = (400 - text_x - 2) // 8
 
-        self.__text_field = Text(self.root, height=1, width=text_width, highlightthickness=0, bg=main_bg,
+        self.__text_field = Text(self.__root, height=1, width=text_width, highlightthickness=0, bg=main_bg,
                                  state=DISABLED)
         self.__insert_extensions()
-        self.__text_field.place(x=text_x, y=self.indent_by_y)
+        self.__text_field.place(x=text_x, y=self._indent_by_y)
         root.update()
 
-        self.add_extensions = Button(self.root, text='Добавить', activebackground=button_ab, bd=0,
+        self.add_extensions = Button(self.__root, text='Добавить', activebackground=button_ab, bd=0,
                                bg=button_bg, command=self.__add_ext_for_spec_type)
-        self.add_extensions.place(x=50, y=self.indent_by_y+30)
+        self.add_extensions.place(x=50, y=self._indent_by_y+30)
 
-        more_info = Button(self.root, text='Подробнее', activebackground=button_ab, bd=0, bg=button_bg)
-        more_info.place(x=275, y=self.indent_by_y+30)
+        more_info = Button(self.__root, text='Подробнее', activebackground=button_ab, bd=0, bg=button_bg)
+        more_info.place(x=275, y=self._indent_by_y+30)
 
         self.__all_widgets = [text_label, self.__text_field, self.add_extensions, more_info]
 
 
-class DeleteWidgets:
-    def __init__(self, *widgets: AddTypeWidget):
-        self.__widgets = widgets
+class MainFrame:
+    def __init__(self):
+        self.main_frame = Canvas(root, width=app_width, height=app_height, bg=main_bg)
+        self.main_frame.pack()
+        self.__is_active = 0
+        self.__recent_files = None
 
-    def delete(self):
-        for widget in self.__widgets:
-            widget.__del__()
+        self.__create_frame()
+
+    def __frame_bottom(self):
+        status = Label(self.main_frame, text='Текущее состояние: ', bg=main_bg)
+        status.place(x=10, y=app_height-35)   # 265
+
+        self.on_or_off = Label(self.main_frame, text='(выкл)', bg=main_bg)
+        self.on_or_off.place(x=185, y=app_height-35)
+
+        self.indicator = self.main_frame.create_image(170, app_height-24, image=not_active)
+        # Label(self.main_frame, image=not_active, bg=main_bg)
+
+        self.launch_button = Button(self.main_frame, text='Включить', bd=0, bg=main_bg,
+                                    activebackground=button_ab)
+        self.launch_button.place(x=250, y=app_height-39)  # 261
+
+    def insert_moved_files_statistics(self):
+        statistic = open('config.conf', 'r')
+        statistic = str(statistic.readlines())
+        statistic = eval(statistic[statistic.find('=')+1: statistic.find('}')+1])
+        ru_postfixes = {
+            'mb': 'Мб',
+            'gb': 'Гб'
+        }
+
+        files = statistic['moved']
+        size = statistic['size']
+        postfix = ru_postfixes[statistic['postfix']]
+
+        self.__quantity_of_moved_files['text'] = f'Всего премещено файлов: {files}'
+        self.__totalen_bruh['text'] = f'Общий размер всех файлов: {size} {postfix}'
+
+        lines = []
+        index = 0
+        for line in open('logs.log', 'r').readlines():
+            index += 1
+            if index == 10:
+                break
+
+            lines.append(line)
+
+        last_changes_list = []
+        for line in lines:
+            if line != '\n':
+                last_changes_list.append(line.rstrip())
+
+        for key, event in enumerate(last_changes_list):
+            meta_event = last_changes_list[key]
+            meta_event = meta_event[meta_event.find('/'): meta_event.find(';')]
+            if len(meta_event) > 47:
+                meta_event = meta_event[:47] + '...'
+            last_changes_list[key] = meta_event
+
+        self.__log_field.config(state=NORMAL)
+
+        last_changes = ''
+        for i in last_changes_list:
+            last_changes += i + '\n\n'
+
+        if last_changes != self.__recent_files:
+            self.__log_field.insert(0.0, last_changes)
+            self.__recent_files = last_changes
+
+    def __create_frame(self):
+        self.__frame_bottom()
+
+        self.__quantity_of_moved_files = Label(self.main_frame, bg=main_bg)
+        self.__quantity_of_moved_files.place(x=100, y=10)
+
+        self.__totalen_bruh = Label(self.main_frame, bg=main_bg)
+        self.__totalen_bruh.place(x=75, y=40)
+
+        Label(self.main_frame, text='Последние изменения:', bg=main_bg).place(x=115, y=75)
+
+        self.main_frame.create_line(0, 67, 400, 67, fill='#cccccc')
+
+        self.__log_field = Text(self.main_frame, width=400, height=9, state=NORMAL, highlightthickness=0, bg=main_bg)
+        self.__log_field.place(x=1, y=100)
+        self.insert_moved_files_statistics()
 
 
 class SpecialFiles:
-    def __init__(self):
+    def __init__(self, root):
         self.is_empty = True
-        self.__widgets = []
         for component in open('config.conf', 'r').readlines():
             if component[:component.find('=')] == 'special':
                 lists = eval(component[component.find('=') + 1:])
                 break
-
         if lists:
             self.is_empty = False
 
+        self.__root = root
+
+    def _destroy_frame(self):
+        pass
+
+    def add_content(self):
         if self.is_empty:
             font_size = font.Font(size=12)
             not_found = Label(image=nothing_found, bg=main_bg)
@@ -323,37 +444,20 @@ class SpecialFiles:
             add_button = Button(text='добавить?', bd=0, font=font_size,
                                 bg=main_bg, activebackground=button_ab, command=self.__add_files)
             add_button.place(x=210, y=237)
-            # self.__widgets.append()
-        else:
-            self.__print()
-
-    def __del__(self):
-        pass
+            return
 
     def __add_files(self):
         tl_frame = Toplevel()  # tl - Top Level
         tl_frame.config(bg=main_bg)
         tl_frame.geometry(geometry_for_tl_frame_sp_files)
         tl_frame.resizable(width=False, height=False)
-        tl_frame.title('Add new configure')
+        tl_frame.title('Добавление новой конфигурации')
 
         config_name_label = Label(tl_frame, text='Название конфигурации:', bg=main_bg).place(x=15, y=15)
         config_name = Entry(tl_frame, width=23, bg=text_label_bg, bd=0)
         config_name.place(x=200, y=15)
 
         special_names_label = Label(tl_frame, text='Укажите специальные имена:', bg=main_bg).place(x=15, y=75)
-
-
-        # save_button = Button(tl_frame, text='Сохранить', highlightthickness=0, bd=0, bg=button_bg,
-        #                      # bg='#999966,  activebackground='#b8b894'
-        #                      activebackground=button_ab);
-        # save_button.place(x=70, y=90)
-        # cancel_button = Button(tl_frame, text='Отменить', highlightthickness=0, bd=0, bg=button_bg,
-        #                        activebackground=button_ab,
-        #                        command=lambda: tl_frame.destroy()).place(x=230, y=90)
-        #
-        # enter_area = Text(tl_frame, width=48, height=3, bg=text_label_bg, highlightthickness=0, bd=0)  # '#c2c2a3'
-        # enter_area.place(x=7, y=30)
 
     def __print(self):
         current_y = 100
@@ -383,102 +487,99 @@ def get_cursor_cords(event):
 
 
 def add_extensions(event=None):
+    # global in_add_ext
+    # if in_add_ext or in_special_files or in_settings:
+    #     return
+    # else:
+    #     in_add_ext = True
+    #
+    # # ----CREATE A NEW FRAME----
+    # extension_frame = Canvas(width=400, height=300, bg=main_bg)
+    # extension_frame.place(x=0, y=0)
+    # # --------------------------
+    #
+    # def destroy(event=None):
+    #     global in_add_ext
+    #     in_add_ext = False
+    #     to_destroy_wid.delete()
+    #     to_destroy_head.delete()
+    #
+    # def checkbox_type_sort():
+    #     global types_sort
+    #     lin = [j for i in lines for j in i]
+    #     val = types_sort.get()
+    #     color = {
+    #         0: 'red',
+    #         1: '#00ff00'
+    #     }
+    #
+    #     for i in lin:
+    #         extension_frame.itemconfig(i, fill=color[val])
+    #
+    #     for i in disabled:
+    #         if val == 0:
+    #             i.configure(state=DISABLED)
+    #         else:
+    #             i.configure(state=NORMAL)
+    #
+    #
+    # back_button = Button(text='Назад', bd=0, bg=button_bg, activebackground=button_bg, command=destroy)
+    # back_button.place(x=5, y=5)
+    #
+    # # ----HEAD----
+    # caption_font_size = font.Font(size=12)
+    # all_ext = Label(text='Все просматриваемые расширения:', bg=main_bg, font=caption_font_size)
+    # all_ext.place(x=50, y=45)
+    # extension_frame.create_line(0, 70, 400, 70, fill='#cccccc')     # create a underline 1
+    #
+    # sort_by_types = Checkbutton(extension_frame, variable=types_sort, onvalue=1, offvalue=0,
+    #                               text='Сортровать файлы согласно их типам',
+    #                               bg=main_bg, activebackground=main_bg,
+    #                             highlightthickness=0, command=checkbox_type_sort)    # checkbox
+    # sort_by_types.place(x=24, y=85)
+    # # ------------
+    #
+    # photo = AddTypeWidget(extension_frame, 'img', 0)
+    # photo.add_widget()
+    #
+    # video = AddTypeWidget(extension_frame, 'vid', 1)
+    # video.add_widget()
+    #
+    # documents = AddTypeWidget(extension_frame, 'doc', 2)
+    # documents.add_widget()
+    #
+    # audios = AddTypeWidget(extension_frame, 'aud', 3)
+    # audios.add_widget()
+    #
+    # archives = AddTypeWidget(extension_frame, 'arh', 4)
+    # archives.add_widget()
+    #
+    # last_label_y_cord = archives.indent_by_y+65+80   # need to calculate lines width and height
+    #
+    # to_destroy_wid = DeleteWidgets(photo, video, documents, audios, archives)
+    # to_destroy_head = Destroy(extension_frame, back_button, all_ext)
+    #
+    # disabled = [photo.add_extensions, video.add_extensions]
+    #
+    # types_sort_line1 = extension_frame.create_line(14, 95, 14, last_label_y_cord)
+    # types_sort_line2 = extension_frame.create_line(14, 95, 24, 95)
+    # types_sort_line3 = extension_frame.create_line(14, last_label_y_cord, 24, last_label_y_cord)
+    #
+    # lines = []
+    # lines.append([types_sort_line1, types_sort_line2,  types_sort_line3])
+    #
+    # checkbox_type_sort()
+    # checkbox_stack_sort()
     global in_add_ext
     if in_add_ext or in_special_files or in_settings:
         return
     else:
         in_add_ext = True
 
-    # ----CREATE A NEW FRAME----
-    extension_frame = Canvas(width=400, height=300, bg=main_bg)
-    extension_frame.place(x=0, y=0)
-    # vscrollbar = Scrollbar(extension_frame)
-    # extension_frame.configure(yscrollcommand=vscrollbar.set)
-    # vscrollbar.config(command=extension_frame.yview)
-    # vscrollbar.pack(side=RIGHT, fill=Y)
-    # # framea = Frame(extension_frame)
-    # # extension_frame.create_window(0, 0, window=framea, anchor='nw')
-    # frame = Destroy(extension_frame)
-    # --------------------------
+    frame = AddExtensions(root)
+    frame.add_content()
 
-    def destroy(event=None):
-        global in_add_ext
-        in_add_ext = False
-        to_destroy_wid.delete()
-        to_destroy_head.delete()
-
-    def checkbox_type_sort():
-        global types_sort
-        lin = [j for i in lines for j in i]
-        val = types_sort.get()
-        color = {
-            0: 'red',
-            1: '#00ff00'
-        }
-
-        for i in lin:
-            extension_frame.itemconfig(i, fill=color[val])
-
-        for i in disabled:
-            if val == 0:
-                i.configure(state=DISABLED)
-            else:
-                i.configure(state=NORMAL)
-
-    def checkbox_stack_sort():
-        pass
-
-    back_button = Button(text='Назад', bd=0, bg=button_bg, activebackground=button_bg, command=destroy)
-    back_button.place(x=5, y=5)
-
-    ref_x = 30; ref_y = 130
-    # ----HEAD----
-    caption_font_size = font.Font(size=12)
-    all_ext = Label(text='Все просматриваемые расширения:', bg=main_bg, font=caption_font_size)
-    all_ext.place(x=50, y=45)
-    extension_frame.create_line(0, 70, 400, 70, fill='#cccccc')     # create a underline 1
-
-    sort_by_types = Checkbutton(extension_frame, variable=types_sort, onvalue=1, offvalue=0,
-                                  text='Сортровать файлы по их типам',
-                                  bg=main_bg, activebackground=main_bg,
-                                highlightthickness=0, command=checkbox_type_sort)    # checkbox
-    sort_by_types.place(x=24, y=85)
-    # ------------
-
-    photo = AddTypeWidget(extension_frame, 'img', 0)
-    photo.add_widget()
-
-    video = AddTypeWidget(extension_frame, 'vid', 1)
-    video.add_widget()
-
-    documents = AddTypeWidget(extension_frame, 'doc', 2)
-    documents.add_widget()
-
-    audios = AddTypeWidget(extension_frame, 'aud', 3)
-    audios.add_widget()
-
-    archives = AddTypeWidget(extension_frame, 'arh', 4)
-    archives.add_widget()
-
-    last_label_y_cord = archives.indent_by_y+65+80   # need to calculate lines width and height
-
-    to_destroy_wid = DeleteWidgets(photo, video, documents, audios, archives)
-    to_destroy_head = Destroy(extension_frame, back_button, all_ext)
-
-
-    disabled = [photo.add_extensions, video.add_extensions]
-
-    types_sort_line1 = extension_frame.create_line(14, 95, 14, last_label_y_cord)
-    types_sort_line2 = extension_frame.create_line(14, 95, 24, 95)
-    types_sort_line3 = extension_frame.create_line(14, last_label_y_cord, 24, last_label_y_cord)
-
-    lines = []
-    lines.append([types_sort_line1, types_sort_line2,  types_sort_line3])
-
-    checkbox_type_sort()
-    checkbox_stack_sort()
-
-    root.bind('<Escape>', destroy)
+    root.bind('<Escape>', frame.destroy_frame)
 
 
 def special_files(event=None):
@@ -532,7 +633,6 @@ def special_files(event=None):
 
 
 def settings(event=None):
-    print('here2')
     global in_settings
     if in_settings or in_special_files or in_add_ext:
         return
@@ -562,8 +662,10 @@ def settings(event=None):
     root.bind('<Escape>', destroy)
 
 
-def help():
-    pass
+def update_main_frame():
+    while True:
+        main_frame.insert_moved_files_statistics()
+        time.sleep(3)
 
 
 # ----MENU CREATE----
@@ -612,8 +714,10 @@ menu.add_command(label='Справка', activebackground=button_ab, command=hel
 # log_field.config(command=insert_text_on_main_screen())
 # ------------------
 
-main_frame = MainFrame()
-# root.after(1000, main_frame.insert_file_statistics)
+# main_frame = MainFrame()
+a = FileInfoBtn(root, 'a', [])
+a.place(x=10, y=10)
+
 
 # ----KEYS BIND----
 root.bind('<Control-e>', add_extensions)
@@ -622,5 +726,6 @@ root.bind('<Control-e>', add_extensions)
 root.bind('<Button-1>', get_cursor_cords)
 # -----------------
 
+Thread(target=update_main_frame).start()
 root.mainloop()
 # root.protocol("WM_DELETE_WINDOW", close)
